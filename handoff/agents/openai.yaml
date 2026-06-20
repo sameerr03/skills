@@ -1,0 +1,4 @@
+interface:
+  display_name: "Handoff"
+  short_description: "Create discussion handoff prompts"
+  default_prompt: "Use $handoff to create a concise prompt for starting a fresh discussion about the next task."

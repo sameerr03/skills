@@ -1,0 +1,4 @@
+interface:
+  display_name: "Triage"
+  short_description: "Read-only triage for PR review comments"
+  default_prompt: "Use $triage to evaluate these PR review comments and recommend which ones to fix."

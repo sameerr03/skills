@@ -1,0 +1,4 @@
+interface:
+  display_name: "Self Review Loop"
+  short_description: "Run independent reviewer agents and iterate"
+  default_prompt: "Use $self-review-loop after a substantial implementation to run independent read-only reviewers, triage their feedback, and iterate."
