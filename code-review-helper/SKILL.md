@@ -1,130 +1,196 @@
 ---
 name: code-review-helper
-description: Analyze a PR or branch diff to help the user review code faster. Prioritizes files by importance, groups related changes, identifies risks, and gives an optimal review order. Use this skill whenever the user says things like "review this PR", "help me review", "what should I look at", "summarize the changes", "review order", "what's important in this diff", or any request to understand, triage, or navigate code changes. Also trigger when the user pastes a PR URL or asks about changes on a branch.
+description: Analyze a PR or branch diff to help the user understand and review code changes faster. Prioritizes files by importance, explains the mental model of the change, groups related changes, summarizes test coverage, identifies risk signals and missing cases, and gives an optimal review route. Use whenever the user says things like "review this PR", "help me review", "what should I look at", "summarize the changes", "review order", "what's important in this diff", or any request to understand, triage, navigate, or prepare to review code changes. Also trigger when the user pastes a PR URL or asks about changes on a branch.
 ---
 
 # Code Review Helper
 
-You help the user efficiently review code changes by analyzing a diff and producing a structured review guide. The goal is to minimize the time the user spends while maximizing their understanding and ability to catch real issues.
+Help the user understand code changes as fast as possible so they can review the
+whole diff with a strong mental model. Your job is review navigation, context
+building, and risk surfacing: explain what changed, how the pieces relate, what
+the tests prove, and where the human reviewer should focus.
 
-## How to gather the diff
+## First rule: do not ask what to review when a branch can answer it
 
-Figure out what changes to analyze based on context:
+When invoked from a repository branch, assume the user wants the current branch's
+associated PR or branch diff reviewed. Do the discovery yourself.
 
-- If the user gives a PR URL or number, use `gh pr diff <number>` and `gh pr view <number>` to get the diff and PR description
-- If the user says "review my changes" or similar, use `git diff main...HEAD` (or the appropriate base branch)
-- If the user points to a specific commit, use `git show <commit>`
-- If unclear, ask the user what they want reviewed
+Diff source precedence:
 
-Also gather context: read the PR description/commit messages and understand the *intent* of the change. This shapes everything downstream.
+1. If the user gives a PR URL or number, use that PR.
+2. Otherwise, try the current branch's PR with `gh pr view --json number,title,body,baseRefName,headRefName,url`.
+3. If a PR is found, use its base branch and gather `gh pr view` metadata plus `gh pr diff`.
+4. If no PR is found, infer the base branch from the repo default, upstream tracking branch, or common bases such as `main`/`master`, then use `git diff <base>...HEAD`.
+5. If the user points to a commit, use `git show <commit>`.
 
-## Analysis steps
+Ask a blocking question only when discovery fails and there is no meaningful local
+diff, or when multiple plausible PRs/diffs exist and choosing one would be risky.
+Do not stop just to ask whether you should review, which branch to review, or what
+PR number to use if the current branch already makes that discoverable.
 
-Work through these steps before presenting your output. You need to genuinely understand the change, not just categorize files mechanically.
+Always gather intent before analysis: PR title/body, commit messages, changed file
+list, and enough surrounding code to understand the existing subsystem.
 
-### 1. Understand the overall change
+## Analysis workflow
 
-Read the full diff and any PR description. Form a mental model of what this change accomplishes and why. This is the foundation — if you get this wrong, your prioritization will be wrong too.
+Work through these steps before presenting the guide. Scale depth to diff size:
+a tiny PR should get a compact route; a large PR needs stronger grouping and a
+clear map.
 
-### 2. Identify auto-generated and mechanical files
+### 1. Build the change map
 
-Detect files that don't need human review:
-- Lockfiles (package-lock.json, yarn.lock, Cargo.lock, go.sum, etc.)
-- Generated code (protobuf outputs, GraphQL codegen, OpenAPI clients, etc.)
-- Snapshot files (.snap, __snapshots__)
-- Migration files that are purely auto-generated
-- Minified or bundled assets
-- Files where the only changes are auto-formatting or import sorting
+Explain the shape of the change before listing files:
 
-These go in the **Skip** category. Be specific about *why* each can be skipped.
+- What behavior, architecture, or workflow changed?
+- Which subsystem(s), entry points, and data flows are touched?
+- What new concepts, types, APIs, routes, jobs, migrations, or state transitions appear?
+- Which files are foundational definitions versus downstream usage or wiring?
+- What should the reviewer understand before opening the diff?
 
-### 3. Build the dependency graph of changes
+This is the fast mental model. Keep it short, but make it concrete.
 
-Understand how the changed files relate to each other:
-- Which files define new types/functions/APIs that other changed files consume?
-- Which files are "upstream" (define interfaces) vs "downstream" (use them)?
-- Which files are independent of each other?
+### 2. Identify review units
 
-This determines review order — you always want the user to read the definition before the usage.
+Cluster changed files into logical units of behavior. A review unit might be:
 
-### 4. Categorize every changed file
+- New feature flow: entry point, business logic, data model, tests
+- API or contract change: route, schema/types, callers, tests
+- Refactor: moved abstraction, updated consumers, compatibility layer
+- Data/storage change: migration, model, ingestion path, backfill, tests
+- UI change: state owner, view components, interaction handlers, tests
 
-Put each file into exactly one category:
+Every changed file should belong to exactly one unit unless it is in Skip.
 
-- **Must Review** — contains meaningful logic changes, new behavior, security-relevant code, or public API changes. These are the files where bugs hide.
-- **Skim** — contains real changes but they're lower-risk: straightforward refactors, test files that mirror already-reviewed logic, config changes, simple wiring. Worth a quick look but unlikely to have surprises.
-- **Skip** — auto-generated, lockfiles, pure formatting, or trivially mechanical. No human review needed.
+### 3. Determine the fastest review route
 
-### 5. Group related files into change units
+Give the user an ordered path through the diff. Optimize for comprehension:
 
-Cluster files that are part of the same logical change. For example:
-- "New authentication flow" → auth controller + auth middleware + auth tests + user model change
-- "API endpoint addition" → route definition + handler + request/response types + tests
-- "Refactor logging" → 8 files that all do the same find-and-replace
+1. PR intent and contract/schema/type changes
+2. Main entry points
+3. Core logic and state transitions
+4. Downstream callers/consumers
+5. Tests that define intended behavior
+6. Wiring/config/docs
+7. Generated or mechanical files to skip
 
-Give each group a short descriptive name. A file can only belong to one group. Independent files can be their own group.
+Within each unit, put definitions before usage and invariants before edge cases.
+Between units, put the highest-risk or most central behavior first.
 
-### 6. Determine review order
+### 4. Categorize files by attention level
 
-Within each group, order files so the user reads foundational/upstream files first. Between groups, order by importance — the group with the most critical changes comes first.
+Use exactly one category for each changed file:
 
-The principle: at every point in the review, the user should already have the context they need to understand what they're looking at.
+- **Must Review**: meaningful logic, public contract, security/trust boundary,
+  data model, concurrency, state transitions, migrations, or behavior-defining tests.
+- **Review After Context**: real code worth reading after the core path is understood,
+  such as downstream consumers, UI wiring, straightforward adapters, or mirrored tests.
+- **Skim**: low-risk config, docs, simple renames, mechanical but not generated changes.
+- **Skip**: generated code, lockfiles, minified/bundled assets, pure formatting/import
+  sorting, snapshots that only reflect already-reviewed behavior, or codegen outputs.
 
-### 7. Scan for risk signals
+Be specific about why Skim/Skip files are lower value. Do not hide meaningful test
+or migration changes in Skip.
 
-Flag specific things that warrant extra attention:
-- **Security surface** — auth logic, input validation, SQL/query construction, file system access, crypto usage, permission checks
-- **Error handling changes** — new catch blocks, changed error types, removed error handling
-- **Concurrency** — locks, async patterns, shared state, race condition potential
-- **Data model changes** — schema changes, serialization format changes, migration correctness
-- **Public API changes** — breaking changes to interfaces other code depends on
-- **Missing pieces** — a new model field without a migration, a changed function signature without updated callers, a new route without auth middleware, added functionality without tests
+### 5. Summarize tests as coverage, not file trivia
 
-Don't be alarmist — only flag things that genuinely deserve attention. False alarms waste the reviewer's time and erode trust.
+For test files, summarize what behavior is covered and what appears absent. The
+goal is to help the user spot missing cases quickly.
+
+For each meaningful test unit, identify:
+
+- Covered happy paths
+- Covered edge/error paths
+- Contract/invariant being asserted
+- Fixtures or mocks that shape the behavior
+- Missing or suspiciously thin coverage
+- Tests that define product behavior and deserve careful reading
+- Tests that mostly mirror implementation and can be skimmed after the core logic
+
+If there are no test changes, say whether that seems reasonable for the diff and
+what kinds of tests would normally be expected.
+
+### 6. Surface concrete risks and invariants
+
+Flag specific review concerns, not generic categories. Useful signals include:
+
+- Trust boundaries: auth, permissions, user-controlled input, secrets, external APIs
+- Data correctness: schema changes, migrations, serialization, backfills, idempotency
+- State transitions: lifecycle changes, retries, cancellation, partial failure
+- Error handling: swallowed errors, changed fallback behavior, logging-only failures
+- Concurrency: async ordering, shared state, locking, race windows
+- Public contracts: API shape, type compatibility, caller expectations
+- Missing pieces: caller not updated, migration absent, route lacks auth, tests absent
+
+Phrase risks as things to verify during review. Do not be alarmist, and do not
+invent issues unsupported by the diff.
+
+### 7. Use lightweight visual structure when it helps
+
+Prefer structured Markdown over heavy artifacts. Use a small Mermaid diagram only
+when it clarifies a non-trivial flow, dependency graph, or state transition.
+
+Do not create HTML or other output files by default. Offer or create a richer visual
+artifact only when the user asks for one or the PR is large enough that a separate
+review artifact clearly saves effort.
 
 ## Output format
 
-Present your analysis in this structure:
+Adapt the exact shape to diff size, but default to:
 
-```
-## Summary
+```markdown
+## Change Map
 
-[2-3 sentences: what this change does and why. Set the reviewer's mental model.]
+[2-4 sentences explaining what changed, where it lives, and how to think about it.]
 
-## Review Guide
+## Fastest Review Route
 
-### Group 1: [descriptive name]
-[One sentence explaining what this group of changes accomplishes]
+| Order | File / Unit | Attention | Why read it here |
+|---|---|---|---|
+| 1 | `path/to/types.ts` | Must Review | Defines the new contract used everywhere else. |
+| 2 | `path/to/handler.ts` | Must Review | Main behavior and error paths. |
 
-| # | File | Priority | Focus |
-|---|------|----------|-------|
-| 1 | path/to/file.ts | Must Review | [one-line hint: what to look at and why] |
-| 2 | path/to/other.ts | Must Review | [hint] |
-| 3 | path/to/test.ts | Skim | [hint] |
+## Review Units
 
-### Group 2: [descriptive name]
-...
+### [Unit name]
 
-### Skip (no review needed)
-- `package-lock.json` — lockfile auto-update
-- `generated/types.ts` — codegen output
-- ...
+[One sentence explaining this unit's role.]
 
-## Risk Callouts
+| File | Attention | Focus |
+|---|---|---|
+| `path/to/file.ts` | Must Review | [Specific thing to understand or verify.] |
 
-- **[Risk type]**: [specific file and what to watch for]
-- ...
+## Test Coverage Map
+
+### [Test unit or file]
+
+- Covered: [specific behaviors]
+- Missing/Thin: [specific gaps, or "No obvious gaps"]
+- Review focus: [what the tests establish or fail to establish]
+
+## Risk And Invariant Callouts
+
+- **[Risk/invariant]**: [Specific file/flow and what to verify.]
+
+## Skim / Skip
+
+- `path/to/config` — Skim: [why]
+- `generated/file.ts` — Skip: [why]
 
 ## Completeness Check
 
-- [Any missing pieces: tests not added, migrations absent, callers not updated, etc.]
-- [Or "No gaps detected" if everything looks complete]
+- [Missing tests, migrations, caller updates, docs, or "No obvious gaps detected."]
 ```
 
-## Important principles
+For very small diffs, collapse sections while preserving the same substance. For
+very large diffs, lead with the map and route, then group aggressively so the user
+can review one coherent unit at a time.
 
-- **Be concise.** The whole point is saving the reviewer time. Don't write paragraphs where a sentence works.
-- **Be specific in hints.** "Look at the error handling" is useless. "The new catch block on line 45 swallows the error silently — intentional?" is useful.
-- **Get the ordering right.** This is the highest-leverage thing you do. A good order means the reviewer never has to jump back and re-read something.
-- **Don't review the code yourself.** Your job is navigation, not judgment. You flag *where* to look and *what's risky*, but the human decides if the code is correct. The exception is the completeness check — if something is obviously missing, say so.
-- **Adapt to the size of the change.** A 3-file PR doesn't need elaborate grouping. A 40-file PR desperately does. Scale your output to match the complexity.
+## Style principles
+
+- Be concise, but not shallow. Optimize for faster understanding.
+- Prefer concrete file-specific guidance over generic advice.
+- Explain tests enough to expose missing coverage.
+- Separate "read first" from "highest risk" when those differ.
+- Do not replace the human reviewer, but do surface obvious suspected gaps that
+  affect review attention.
+- Keep generated, lockfile, and mechanical churn out of the user's critical path.
