@@ -37,17 +37,25 @@ Work through these steps before presenting the guide. Scale depth to diff size:
 a tiny PR should get a compact route; a large PR needs stronger grouping and a
 clear map.
 
-### 1. Build the change map
+### 1. Build a rich change map
 
-Explain the shape of the change before listing files:
+Explain the shape of the change before listing files. This is the fast mental
+model, so make it substantial enough that the user can open the diff already
+knowing how the pieces fit.
 
-- What behavior, architecture, or workflow changed?
-- Which subsystem(s), entry points, and data flows are touched?
-- What new concepts, types, APIs, routes, jobs, migrations, or state transitions appear?
-- Which files are foundational definitions versus downstream usage or wiring?
-- What should the reviewer understand before opening the diff?
+Include the useful parts of:
 
-This is the fast mental model. Keep it short, but make it concrete.
+- **What changed**: old path -> new path, behavior before/after, and user- or
+  system-visible intent.
+- **Where it lives**: subsystem(s), entry points, core logic, data/storage, UI,
+  background jobs, external services, and downstream consumers.
+- **Concept inventory**: new types, APIs, routes, jobs, tables, migrations,
+  components, state transitions, or shared abstractions.
+- **Visual flow**: for any multi-file behavioral change, try to include a small
+  Mermaid diagram showing the data flow, dependency graph, state transition, or
+  old-vs-new path. Skip the diagram only when it would be forced or redundant.
+- **Reviewer mental model**: entry point, core contract/invariant, downstream
+  effects, test contract, and where bugs are most likely to hide.
 
 ### 2. Identify review units
 
@@ -61,20 +69,19 @@ Cluster changed files into logical units of behavior. A review unit might be:
 
 Every changed file should belong to exactly one unit unless it is in Skip.
 
-### 3. Determine the fastest review route
+### 3. Order the review units and files
 
-Give the user an ordered path through the diff. Optimize for comprehension:
+The Review Guide is both the grouping and the route. Do not create a separate
+"Fastest Review Route" table and then repeat the same files in "Review Units".
 
-1. PR intent and contract/schema/type changes
-2. Main entry points
-3. Core logic and state transitions
-4. Downstream callers/consumers
-5. Tests that define intended behavior
-6. Wiring/config/docs
-7. Generated or mechanical files to skip
+Order groups and files for comprehension:
 
-Within each unit, put definitions before usage and invariants before edge cases.
-Between units, put the highest-risk or most central behavior first.
+- Put PR intent and contract/schema/type changes before their consumers.
+- Put main entry points before core logic, core logic before downstream callers,
+  and tests after the implementation they document.
+- Put definitions before usage and invariants before edge cases.
+- Put the highest-risk or most central behavior before peripheral wiring.
+- Put generated or mechanical files in Skip instead of the critical path.
 
 ### 4. Categorize files by attention level
 
@@ -93,21 +100,24 @@ or migration changes in Skip.
 
 ### 5. Summarize tests as coverage, not file trivia
 
-For test files, summarize what behavior is covered and what appears absent. The
-goal is to help the user spot missing cases quickly.
+For test files, summarize what tests exist and what behavior they document. The
+goal is to help the user understand the test intent quickly, not to speculate
+about every possible missing case.
 
 For each meaningful test unit, identify:
 
-- Covered happy paths
-- Covered edge/error paths
+- Behavior documented by the tests
+- Happy paths covered
+- Edge/error paths covered
 - Contract/invariant being asserted
 - Fixtures or mocks that shape the behavior
-- Missing or suspiciously thin coverage
 - Tests that define product behavior and deserve careful reading
 - Tests that mostly mirror implementation and can be skimmed after the core logic
+- How the tests relate to the implementation files
 
-If there are no test changes, say whether that seems reasonable for the diff and
-what kinds of tests would normally be expected.
+Keep missing test cases out of the Test Coverage Map. If an absent test is
+concrete and important, mention it later in Risk And Invariant Callouts or
+Completeness Check.
 
 ### 6. Surface concrete risks and invariants
 
@@ -126,8 +136,9 @@ invent issues unsupported by the diff.
 
 ### 7. Use lightweight visual structure when it helps
 
-Prefer structured Markdown over heavy artifacts. Use a small Mermaid diagram only
-when it clarifies a non-trivial flow, dependency graph, or state transition.
+Prefer structured Markdown over heavy artifacts. Use Mermaid diagrams more often
+than HTML: a compact flow, dependency graph, or state transition is usually the
+best visual anchor for a review. Keep diagrams small and review-relevant.
 
 Do not create HTML or other output files by default. Offer or create a richer visual
 artifact only when the user asks for one or the PR is large enough that a separate
@@ -140,31 +151,46 @@ Adapt the exact shape to diff size, but default to:
 ```markdown
 ## Change Map
 
-[2-4 sentences explaining what changed, where it lives, and how to think about it.]
+### What Changed
 
-## Fastest Review Route
+[Concrete old path -> new path explanation, subsystem touched, and intent.]
 
-| Order | File / Unit | Attention | Why read it here |
+### Flow / Dependency Map
+
+```mermaid
+flowchart TD
+  A["Entry point"] --> B["Core logic or contract"]
+  B --> C["Downstream consumer"]
+  B --> D["Tests documenting behavior"]
+```
+
+### Reviewer Mental Model
+
+- Entry point:
+- Core contract/invariant:
+- Downstream effects:
+- Tests encode:
+- Likeliest places bugs hide:
+
+## Review Guide
+
+### 1. [Unit name]
+
+[What this unit does and why to read it here.]
+
+| Order | File | Attention | Focus |
 |---|---|---|---|
-| 1 | `path/to/types.ts` | Must Review | Defines the new contract used everywhere else. |
-| 2 | `path/to/handler.ts` | Must Review | Main behavior and error paths. |
-
-## Review Units
-
-### [Unit name]
-
-[One sentence explaining this unit's role.]
-
-| File | Attention | Focus |
-|---|---|---|
-| `path/to/file.ts` | Must Review | [Specific thing to understand or verify.] |
+| 1 | `path/to/types.ts` | Must Review | Defines the contract consumed below. |
+| 2 | `path/to/handler.ts` | Must Review | Main behavior and failure modes. |
+| 3 | `path/to/handler.test.ts` | Review After Context | Documents success and error behavior. |
 
 ## Test Coverage Map
 
 ### [Test unit or file]
 
-- Covered: [specific behaviors]
-- Missing/Thin: [specific gaps, or "No obvious gaps"]
+- Documents: [specific behaviors the tests cover]
+- Setup: [fixtures, mocks, test data, helpers that matter]
+- Assertions: [contracts/invariants encoded by the tests]
 - Review focus: [what the tests establish or fail to establish]
 
 ## Risk And Invariant Callouts
@@ -182,15 +208,15 @@ Adapt the exact shape to diff size, but default to:
 ```
 
 For very small diffs, collapse sections while preserving the same substance. For
-very large diffs, lead with the map and route, then group aggressively so the user
-can review one coherent unit at a time.
+very large diffs, lead with the map, then group aggressively so the user can
+review one coherent unit at a time.
 
 ## Style principles
 
 - Be concise, but not shallow. Optimize for faster understanding.
 - Prefer concrete file-specific guidance over generic advice.
-- Explain tests enough to expose missing coverage.
-- Separate "read first" from "highest risk" when those differ.
+- Explain tests as documentation of existing behavior.
+- Keep review order and grouping in one Review Guide.
 - Do not replace the human reviewer, but do surface obvious suspected gaps that
   affect review attention.
 - Keep generated, lockfile, and mechanical churn out of the user's critical path.
