@@ -1,4 +1,4 @@
 interface:
   display_name: "Handoff"
-  short_description: "Create discussion handoff prompts"
-  default_prompt: "Use $handoff to create a concise prompt for starting a fresh discussion about the next task."
+  short_description: "Create discussion-first Codex threads"
+  default_prompt: "Use $handoff to create a fresh Codex thread that starts by understanding the task before implementation."
