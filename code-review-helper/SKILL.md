@@ -47,13 +47,17 @@ Include the useful parts of:
 
 - **What changed**: old path -> new path, behavior before/after, and user- or
   system-visible intent.
+- **Schema and data shape changes**: database migrations, table/index changes,
+  validation schema changes, API request/response shape changes, serialized
+  payloads, TypeScript/Python types, Convex schemas, GraphQL/OpenAPI contracts,
+  or any other change to the shape of data.
+- **Contract and code-shape summaries**: compact input/output summaries for new
+  or changed functions, API endpoints, service boundaries, public types, or
+  important internal helpers.
 - **Where it lives**: subsystem(s), entry points, core logic, data/storage, UI,
   background jobs, external services, and downstream consumers.
 - **Concept inventory**: new types, APIs, routes, jobs, tables, migrations,
   components, state transitions, or shared abstractions.
-- **Visual flow**: for any multi-file behavioral change, try to include a small
-  Mermaid diagram showing the data flow, dependency graph, state transition, or
-  old-vs-new path. Skip the diagram only when it would be forced or redundant.
 - **Reviewer mental model**: entry point, core contract/invariant, downstream
   effects, test contract, and where bugs are most likely to hide.
 
@@ -134,11 +138,17 @@ Flag specific review concerns, not generic categories. Useful signals include:
 Phrase risks as things to verify during review. Do not be alarmist, and do not
 invent issues unsupported by the diff.
 
-### 7. Use lightweight visual structure when it helps
+### 7. Use compact code-shape summaries when they help
 
-Prefer structured Markdown over heavy artifacts. Use Mermaid diagrams more often
-than HTML: a compact flow, dependency graph, or state transition is usually the
-best visual anchor for a review. Keep diagrams small and review-relevant.
+Prefer structured Markdown over heavy artifacts. Do not use Mermaid diagrams by
+default. For comprehension, prefer compact before/after shapes and input/output
+summaries:
+
+- Function signatures and data contracts
+- Endpoint request/response shapes
+- Schema before/after snippets
+- Old behavior -> new behavior summaries
+- Small edited-code snippets only when the exact code shape matters
 
 Do not create HTML or other output files by default. Offer or create a richer visual
 artifact only when the user asks for one or the PR is large enough that a separate
@@ -153,16 +163,42 @@ Adapt the exact shape to diff size, but default to:
 
 ### What Changed
 
-[Concrete old path -> new path explanation, subsystem touched, and intent.]
+[Large-scale conceptual changes, old path -> new path behavior, subsystem
+touched, and intent.]
 
-### Flow / Dependency Map
+### Schema / Data Shape Changes
 
-```mermaid
-flowchart TD
-  A["Entry point"] --> B["Core logic or contract"]
-  B --> C["Downstream consumer"]
-  B --> D["Tests documenting behavior"]
+```text
+[Contract or schema name]
+Before:
+- field: type
+
+After:
+- field: type
+- newField?: type
 ```
+
+Include DB migrations, table/index changes, validation schemas, API payloads,
+serialized formats, TypeScript/Python types, Convex schemas, GraphQL/OpenAPI
+contracts, or other data-shape changes when present.
+
+### Contract / Code Shape Changes
+
+```text
+[Function, endpoint, service, or type]
+Input:
+- ...
+
+Output:
+- ...
+
+Behavior:
+- old behavior -> new behavior
+```
+
+Use compact summaries, not long code dumps. Show only the function signatures,
+endpoint shapes, edited-code structure, or before/after snippets that help the
+reviewer understand the diff quickly.
 
 ### Reviewer Mental Model
 
