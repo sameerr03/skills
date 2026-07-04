@@ -1,0 +1,4 @@
+interface:
+  display_name: "Issue"
+  short_description: "Draft and create GitHub issues"
+  default_prompt: "Use $issue to turn this discussion into a well-structured GitHub issue."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Commit"
+  short_description: "Create a focused git commit"
+  default_prompt: "Use $commit to review the current changes and create a focused git commit."

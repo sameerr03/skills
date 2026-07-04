@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Review Helper"
+  short_description: "Map PR diffs into a review route"
+  default_prompt: "Use $code-review-helper to analyze the current branch's PR and give me the fastest review route."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Discuss"
+  short_description: "Explore ideas before implementation"
+  default_prompt: "Use $discuss to investigate this idea with me before making changes."
