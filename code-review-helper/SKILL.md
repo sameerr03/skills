@@ -63,7 +63,8 @@ Include the useful parts of:
 
 ### 2. Identify review units
 
-Cluster changed files into logical units of behavior. A review unit might be:
+Cluster changed files into logical units of behavior. Name groups for the actual
+shape of the PR, not for a fixed template. A review unit might be:
 
 - New feature flow: entry point, business logic, data model, tests
 - API or contract change: route, schema/types, callers, tests
@@ -71,18 +72,29 @@ Cluster changed files into logical units of behavior. A review unit might be:
 - Data/storage change: migration, model, ingestion path, backfill, tests
 - UI change: state owner, view components, interaction handlers, tests
 
-Every changed file should belong to exactly one unit unless it is in Skip.
+Every changed file should belong to exactly one unit unless it is in Skip. Test
+files belong inside the group whose behavior they validate; do not place tests in
+a separate global section.
 
 ### 3. Order the review units and files
 
 The Review Guide is both the grouping and the route. Do not create a separate
 "Fastest Review Route" table and then repeat the same files in "Review Units".
 
-Order groups and files for comprehension:
+Order groups and files for comprehension, using a call-stack-aware flow rather
+than a rigid list of group names:
 
-- Put PR intent and contract/schema/type changes before their consumers.
-- Put main entry points before core logic, core logic before downstream callers,
-  and tests after the implementation they document.
+- Put significant schema, type, data-shape, or contract changes first because
+  they define the shape of everything else.
+- Separately identify the reviewer entry point: the UI action, API caller, route,
+  command, job, event, or other place where the reviewer can understand the flow
+  in context. This may not be the first group if schemas/contracts come first.
+- After the entry point, follow the call stack deeper through boundaries, call
+  sites, helpers, storage, and external integrations, then back up through
+  consumers, rendering, wiring, or cleanup as needed.
+- Use semantic PR-specific group names, such as `Principle Score Response
+  Contract`, `Portfolio Page Refresh Flow`, `Signed Scoring Service Boundary`,
+  `Cache Write And Expiry Logic`, or `Reason Rendering View Model`.
 - Put definitions before usage and invariants before edge cases.
 - Put the highest-risk or most central behavior before peripheral wiring.
 - Put generated or mechanical files in Skip instead of the critical path.
@@ -102,26 +114,33 @@ Use exactly one category for each changed file:
 Be specific about why Skim/Skip files are lower value. Do not hide meaningful test
 or migration changes in Skip.
 
-### 5. Summarize tests as coverage, not file trivia
+### 5. Summarize tests inside their review unit
 
-For test files, summarize what tests exist and what behavior they document. The
-goal is to help the user understand the test intent quickly, not to speculate
-about every possible missing case.
+For test files, summarize what tests exist and what behavior each test case
+documents. The goal is to help the user understand every relevant test case
+without manually reading the test file.
 
-For each meaningful test unit, identify:
+Rules:
 
-- Behavior documented by the tests
-- Happy paths covered
-- Edge/error paths covered
-- Contract/invariant being asserted
-- Fixtures or mocks that shape the behavior
-- Tests that define product behavior and deserve careful reading
-- Tests that mostly mirror implementation and can be skimmed after the core logic
-- How the tests relate to the implementation files
+- Put tests under `Tests in this unit` inside the review group they validate.
+- Read the relevant full test file or surrounding test group, not only the diff
+  hunk.
+- Include unchanged tests in the same relevant file, `describe` block, class, or
+  function group when they define the behavior under review.
+- Enumerate every meaningful test case in plain English.
+- Do not collapse many cases into a theme summary like "auth gating and cleanup".
+- Do not copy exact `describe`/`it`/`test_*` strings unless exact wording matters.
+- For Vitest/Jest-style tests, group related cases by their surrounding
+  `describe` concept when useful, then summarize each `it`/`test` case in
+  English.
+- For pytest/unittest-style tests, list each relevant test function/method as an
+  English behavior summary.
+- Mention fixtures, mocks, setup, or helpers only when they materially shape the
+  behavior being tested.
 
-Keep missing test cases out of the Test Coverage Map. If an absent test is
-concrete and important, mention it later in Risk And Invariant Callouts or
-Completeness Check.
+Keep missing test cases out of the test summary. If an absent test is concrete
+and important, mention it later in Risk And Invariant Callouts or Completeness
+Check.
 
 ### 6. Surface concrete risks and invariants
 
@@ -202,7 +221,7 @@ reviewer understand the diff quickly.
 
 ### Reviewer Mental Model
 
-- Entry point:
+- Reviewer entry point:
 - Core contract/invariant:
 - Downstream effects:
 - Tests encode:
@@ -218,16 +237,18 @@ reviewer understand the diff quickly.
 |---|---|---|---|
 | 1 | `path/to/types.ts` | Must Review | Defines the contract consumed below. |
 | 2 | `path/to/handler.ts` | Must Review | Main behavior and failure modes. |
-| 3 | `path/to/handler.test.ts` | Review After Context | Documents success and error behavior. |
 
-## Test Coverage Map
+Tests in this unit:
 
-### [Test unit or file]
+`path/to/handler.test.ts`
 
-- Documents: [specific behaviors the tests cover]
-- Setup: [fixtures, mocks, test data, helpers that matter]
-- Assertions: [contracts/invariants encoded by the tests]
-- Review focus: [what the tests establish or fail to establish]
+Input validation:
+- Rejects requests with a missing required field.
+- Accepts a valid request and passes normalized input to the handler.
+
+Error handling:
+- Converts service failures into the expected error response.
+- Preserves the existing cache when refresh fails.
 
 ## Risk And Invariant Callouts
 
@@ -251,8 +272,11 @@ review one coherent unit at a time.
 
 - Be concise, but not shallow. Optimize for faster understanding.
 - Prefer concrete file-specific guidance over generic advice.
-- Explain tests as documentation of existing behavior.
+- Explain tests as an explicit per-case behavior inventory inside the review
+  group they validate.
 - Keep review order and grouping in one Review Guide.
+- Use flexible, PR-specific group names; the call-stack flow is a guide, not a
+  fixed section template.
 - Do not replace the human reviewer, but do surface obvious suspected gaps that
   affect review attention.
 - Keep generated, lockfile, and mechanical churn out of the user's critical path.
