@@ -1,104 +1,48 @@
 ---
 name: self-review-loop
-description: Run an autonomous post-implementation review loop using independent read-only `codex exec` subagents. Use after Codex completes a substantial code change, refactor, feature, migration, frontend build, or multi-file task and should review its own work, ask one or more focused reviewer agents for feedback, triage findings, make only main-agent edits, re-run validation, and stop for the user when reviewer feedback requires an unplanned product, design, data, security, or behavioral assumption.
+description: Run an autonomous post-implementation review loop using independent read-only reviewer agents. Use after Codex completes a substantial code change, refactor, feature, migration, frontend build, or multi-file task and should review its own work, obtain focused adversarial feedback, triage findings, make only main-agent edits, re-run validation, and stop when a fix requires an unplanned product, design, data, security, or behavioral assumption. Prefer native subagents and use `codex exec` only when native agent tools are unavailable.
 ---
 
 # Self Review Loop
 
-## Overview
+## Purpose
 
-Use this skill after meaningful implementation work to create an explicit self-review loop. The main agent owns all decisions and code changes; `codex exec` subagents are independent read-only reviewers that produce feedback only.
+Run an independent adversarial review after meaningful implementation work and before PR review. Reviewer agents produce feedback only; the main agent owns all decisions, edits, validation, and user communication.
 
-## Core Rules
+Independence is required. Prefer native subagents. If native agent tools are unavailable, use separate read-only `codex exec` reviewers. If neither is available, report that the loop could not run; never substitute inline self-review by the implementing agent.
 
-- Treat subagents as reviewers, not implementers. Their prompts must explicitly forbid file edits, commits, pushes, destructive commands, and network use unless the main task already requires and permits it.
-- Keep the main agent responsible for all code edits, test runs, final judgment, and user communication.
-- Do not hide uncertainty behind the loop. Stop and ask the user when a proposed fix depends on a requirement, product behavior, data contract, UX choice, security posture, or compatibility promise that was not already established.
-- Prefer focused reviewers over one vague reviewer for large work: correctness, tests, security, performance, UX/accessibility, migrations, or domain-specific behavior.
-- Keep reviewer context minimal but sufficient: the task goal, changed files or diff, relevant constraints, and exact review focus.
-- Continue the loop only while it is producing actionable signal. One review round is often enough for small work; use additional rounds after substantive fixes or when risk remains.
+## Choose Reviewers From the Change
+
+Select reviewer expertise from the contracts and failure modes affected by the change, not from diff size or a fixed reviewer count. Almost always include:
+
+- **Correctness and regressions:** verify required behavior, edge cases, and compatibility with established assumptions.
+- **Code simplicity:** find duplicated logic; constants, configuration, literals, or types duplicated across files; unnecessary abstractions; and defensive, generic, or type-heavy handling beyond actual requirements and callers. Avoid unrelated cleanup and subjective style advice.
+
+Add focused reviewers when the work calls for them, such as security/privacy, test adequacy, UX/accessibility, performance, migration/rollback behavior, concurrency, or domain calculations. This list is illustrative: invent a specialized lane when the task has another important failure mode. Avoid multiple vague reviewers covering the same surface.
+
+### Data Validation
+
+Use a data-validation reviewer when a change writes, migrates, backfills, aggregates, or precomputes consequential database values. It should:
+
+- Work read-only against an explicitly permitted local or staging database; never production without explicit authorization.
+- Derive expected results independently from the task's business or mathematical contract. Do not call, import, copy, or mechanically translate the implementation being reviewed.
+- Use a reproducible random or stratified sample covering relevant groups and boundary cases, retrieve the source facts, and compare independently calculated results with stored values using the contract's precision, rounding, null, tie, and grouping rules.
+- Pair sampling with practical full-table invariant checks such as coverage, ranges, uniqueness, population counts, missing values, and stale or ineligible rows.
+- Report the sample method, identifiers, reasoning, expected and actual values, mismatches, invariant results, and validation limits. Missing access or an unclear contract is a validation gap, not evidence that the data is correct.
 
 ## Workflow
 
-1. Establish the review surface.
-   - Summarize what changed and why.
-   - Inspect `git diff`, `git status`, and any test output already available.
-   - Identify risk areas and choose reviewer lanes.
+1. **Establish the surface.** Summarize the task and changed behavior; inspect `git diff`, `git status`, and existing validation; identify affected contracts and choose distinct reviewer lanes.
+2. **Launch read-only reviewers.** Prefer one native `spawn_agent` task per lane. Give each reviewer the goal, changed surface, constraints, established assumptions, and exact focus. Explicitly forbid edits and state-changing operations because native agents share the workspace. Respect available agent slots.
+3. **Collect every result.** Use `wait_agent` until each reviewer finishes, or explicitly `interrupt_agent` when one is no longer relevant. When native agents are unavailable, run equivalent focused reviewers through separate `codex exec` invocations.
+4. **Triage findings.** Treat each finding as a hypothesis. Verify it against current code and task intent, then classify it as fix, reject, defer, or needs-user-clarification. Reconcile duplicates and conflicts; do not change code for false positives or reviewer preferences.
+5. **Iterate as the main agent.** Make minimal fixes for validated findings and rerun relevant tests, type checks, linters, builds, or focused checks. After substantive fixes, use `followup_task` for continuity or spawn a fresh independent reviewer when a new perspective is more valuable.
+6. **Report.** State the reviewer mechanism and lanes, accepted fixes, rejected or deferred findings, residual risks, and validation results.
 
-2. Launch read-only reviewer agents with `codex exec`.
-   - Run reviewers from the repository root or task workspace.
-   - Use one command per reviewer when parallelism is useful.
-   - Ask each reviewer to return severity-ranked findings with file/line references, reproduction or reasoning, and a clear fix recommendation.
-   - Ask reviewers to say "no findings" when appropriate.
-
-3. Triage reviewer output.
-   - Validate each finding against the current code and task intent.
-   - Classify it as fix, reject, defer, or needs-user-clarification.
-   - Reject false positives explicitly in the main agent's notes; do not change code to satisfy an invalid finding.
-
-4. Stop for clarification when needed.
-   - Pause before editing if the fix would choose among plausible behaviors the user did not define.
-   - Present the assumption, why it matters, the options, and the recommended path.
-   - Resume only after the user answers.
-
-5. Iterate as the main agent.
-   - Make the minimal code changes needed for validated findings.
-   - Re-run relevant tests, type checks, linters, builds, or focused manual checks.
-   - If fixes were substantial, launch a follow-up reviewer round against the new diff.
-
-6. Finish with a concise report.
-   - State what reviewer lanes ran.
-   - Summarize accepted fixes, rejected findings, and any residual risks.
-   - Include validation commands and whether they passed.
-
-## Reviewer Prompt Template
-
-Use a prompt like this, adapting the focus lane and context:
-
-```text
-You are an independent read-only reviewer. Do not edit files, run destructive commands, commit, push, or change system state. Review the work in this repository for: <focus lane>.
-
-Task goal:
-<brief original task>
-
-Changed surface:
-<changed files, diff summary, or instructions to inspect git diff>
-
-Constraints:
-<tests already run, user constraints, product assumptions already established>
-
-Return severity-ranked findings only. For each finding include file/line reference, why it matters, how to verify it, and a recommended fix. If the fix requires an unstated assumption, call that out instead of choosing for the main agent. If there are no findings, say so clearly.
-```
-
-## Example Commands
-
-Use `codex exec` with a single quoted prompt. Example:
-
-```bash
-codex exec "You are an independent read-only reviewer. Do not edit files, commit, push, or change system state. Review the current git diff for correctness and regression risk. Return severity-ranked findings with file/line references, verification steps, and recommended fixes. If there are no findings, say so clearly."
-```
-
-For multiple lanes, run separate prompts such as:
-
-- Correctness and regressions
-- Test coverage gaps
-- Security and data exposure
-- UX, accessibility, and responsive behavior
-- Performance and scalability
-- Migration, rollout, and compatibility risk
+Ask reviewers for severity-ranked actionable findings with exact file and line evidence, reasoning or reproduction, and the smallest fix. They should distinguish confirmed defects from questions or unstated assumptions and say clearly when they find nothing.
 
 ## Stop Conditions
 
-Stop the loop and ask the user before changing code when:
+Stop and ask the user before editing when a finding requires choosing an unstated behavior or changing an unapproved product contract, public API, persistence shape, permissions, security posture, generated data, dependency set, migration strategy, or user-visible workflow. Also stop when reviewers conflict and evidence cannot resolve the decision safely.
 
-- A reviewer identifies multiple valid fixes with different product semantics.
-- The recommended fix changes public API behavior, persistence shape, pricing, permissions, security posture, generated data, or user-visible workflow beyond the original request.
-- The fix requires introducing a new dependency, long-running migration, broad refactor, or destructive cleanup not already approved.
-- The reviewer may be right but the evidence is insufficient and verification would be expensive or risky.
-- Reviewer findings conflict with each other or with the original user instruction.
-
-End the loop when:
-
-- Reviewer findings are fixed, rejected with evidence, deferred with rationale, or escalated to the user.
-- Relevant validation passes, or failures are unrelated and clearly reported.
-- Additional reviewer rounds are unlikely to produce new actionable signal.
+End only after every reviewer has completed or been interrupted, every finding is fixed, rejected with evidence, deferred with rationale, or escalated, and relevant validation has passed or unrelated failures have been reported. Run another round only when fixes were substantive or meaningful uncertainty remains.
