@@ -13,7 +13,7 @@ During planning, `ATLAS.md` is the canonical draft and durable discussion tracke
 
 ## ATLAS.md Lifecycle
 
-Create `ATLAS.md` at the repository root unless the user chooses another location. Start minimally with the destination, scope, non-goals, open questions, and an empty issue-map section. Update it after substantive research, decisions, or map changes rather than transcribing every conversation turn.
+Create `ATLAS.md` at the repository root unless the user chooses another location. Start minimally with the destination, Expedition goal, scope, non-goals, open questions, and an empty issue-map section. Update it after substantive research, decisions, or map changes rather than transcribing every conversation turn.
 
 Grow the document in two stages:
 
@@ -22,9 +22,11 @@ Grow the document in two stages:
 
 Keep uncertainty explicit. Never record an open question as a decision or publish speculative downstream work.
 
+Define one **Expedition Goal** as a concrete outcome statement that the future orchestrator can pursue without reinterpreting the destination. Include the completion conditions: every implementation leaf has an accepted exact PR head, required integrated acceptance passes, blockers and residual risks are reported, and no PR is merged without explicit user authorization.
+
 ## Planning
 
-1. Establish the destination, success criteria, scope, non-goals, constraints, repository, and relevant existing issues in `ATLAS.md`.
+1. Establish the destination, Expedition goal and completion conditions, scope, non-goals, constraints, repository, and relevant existing issues in `ATLAS.md`.
 2. Inspect the codebase, architecture, history, documentation, and external contracts needed to plan accurately. Conduct the user discussion, research, and important product or technical decisions now, recording their durable outcomes.
 3. If research is incomplete or a consequential decision remains unresolved, continue planning or stop for the user rather than turning uncertainty into an implementation issue.
 4. Break the destination into coherent workstreams, then recursively split them until every implementation leaf represents one independently understandable, testable, reviewable PR. A grouping issue may contain children but is not itself a PR unit.
@@ -45,9 +47,9 @@ Make each implementation leaf constrain code growth as well as behavior:
 
 Present the complete `ATLAS.md` to the user before creating or changing GitHub issues. Treat the approved version as the publication snapshot. After explicit approval:
 
-1. Create the epic and all grouping and implementation issues.
+1. Create the epic with an explicit `## Expedition Goal` section, then create all grouping and implementation issues.
 2. Convert each implementation section into its issue body, then attach native parent/sub-issue and blocked-by relationships.
-3. Read the graph back from GitHub and compare titles, bodies, hierarchy, dependencies, cycles, and orphaned leaves against the approved snapshot. Correct publication discrepancies before declaring the map ready.
+3. Read the graph back from GitHub and compare the Expedition goal, titles, bodies, hierarchy, dependencies, cycles, and orphaned leaves against the approved snapshot. Correct publication discrepancies before declaring the map ready.
 4. Make GitHub canonical. Replace the full `ATLAS.md` with a small frozen pointer containing the Atlas title, published status and date, epic link, and a statement that GitHub is the execution source of truth.
 5. Report the epic link and a concise named overview of the verified map.
 
