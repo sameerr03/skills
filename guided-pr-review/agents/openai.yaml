@@ -1,0 +1,4 @@
+interface:
+  display_name: "Guided PR Review"
+  short_description: "Explore PR code context and tests conversationally"
+  default_prompt: "Use $guided-pr-review to help me understand and review the current PR one target at a time."
