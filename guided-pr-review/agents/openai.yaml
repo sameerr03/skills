@@ -1,4 +1,4 @@
 interface:
   display_name: "Guided PR Review"
-  short_description: "Learn, review, and quiz a PR conversationally"
-  default_prompt: "Use $guided-pr-review to teach me the current PR, show me the logical review route, then wait and review it conversationally one file at a time before quizzing me."
+  short_description: "Learn and review a PR in full or quick mode"
+  default_prompt: "Use $guided-pr-review to teach and review the current PR. Default to the full conversational file-by-file review; when I ask for quick mode, give me one high-level review response followed by the shorter quiz."

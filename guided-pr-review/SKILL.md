@@ -1,14 +1,17 @@
 ---
 name: guided-pr-review
 description: >
-  Teach and review a pull request through four conversational phases: background,
-  intuition, a logically ordered file-by-file code review, and a final
-  understanding quiz. Use when the user wants to understand a PR without
-  manually chasing callers, parameter origins, types, nested helpers, downstream
-  effects, and tests; wants a second pair of eyes and exact high-value lines to
-  inspect; or needs tailored manual product checks. Especially use for large or
-  stacked PRs and changes involving databases, schemas, financial math, auth,
-  concurrency, integrations, or performance.
+  Teach and review a pull request in either full guided mode or quick mode. Full
+  mode provides background, intuition, a logically ordered file-by-file review,
+  and an understanding quiz. Quick mode provides one high-level,
+  explain-diff-style review response followed by a shorter quiz. Use when the
+  user wants to
+  understand a PR without chasing callers, types, nested helpers, downstream
+  effects, and tests; wants exact high-value lines to inspect; asks for a quick,
+  fast, miniature, or high-level guided review; or needs tailored manual product
+  checks. Especially use for large or stacked PRs and changes involving
+  databases, schemas, financial math, auth, concurrency, integrations, or
+  performance.
 ---
 
 # Guided PR Review
@@ -29,7 +32,26 @@ questions, judgment, pacing, and GitHub review actions.
 - The user decides when a file is understood and clicks GitHub's viewed button.
   Do not spend tokens managing review status, ledgers, or process bookkeeping.
 
-## Use four review phases
+## Choose the review mode
+
+Use **quick mode** when the user explicitly asks for `quick`, `fast`,
+`miniature`, `high-level`, or one-response review. Otherwise default to **full
+mode**. Treat the mode as a per-PR choice rather than a permanent repository
+classification: a side project can contain a consequential migration, while a
+production repository can contain a mechanical change.
+
+Both modes require inspecting the complete PR, its checks, and enough
+surrounding code to verify the explanation. Quick mode compresses what is
+presented to the user; it does not permit shallow agent-side inspection.
+
+Before using quick mode, apply a risk gate. Look for the consequential surfaces
+listed under Mandatory close implementation inspection. If they are present,
+identify them prominently, require their exact implementation under `Read this
+code`, and recommend full mode when a one-response overview would not provide
+enough scrutiny. Do not call a PR ready merely because automated reviewers
+approved it.
+
+## Full mode: use four review phases
 
 Run the review as **Background -> Intuition -> Code -> Quiz**. Background and
 intuition prepare the user for the code rather than becoming detached reports.
@@ -56,6 +78,40 @@ gate.
 6. Start **Quiz** only after the final target is complete and the user is ready
    to leave the code-review phase.
 
+## Quick mode: one response -> Quiz
+
+Quick mode is a compact knowledge-transfer and assurance workflow, not a
+miniature file-by-file review.
+
+1. Inspect the complete PR and surrounding system before responding.
+2. Produce one integrated review response with these sections in order:
+   - **Risk gate**: state whether quick mode is appropriate and identify any
+     surface requiring close implementation inspection.
+   - **Background**: explain only the prior system needed for this change.
+   - **Intuition**: show the goal, old behavior -> new behavior, central
+     invariants, and a concrete example when useful.
+   - **High-level code walkthrough**: group the implementation by execution,
+     dependency, or data flow rather than file order. Explain how the important
+     pieces realize the new behavior without dumping the diff.
+   - **Verification and findings**: summarize test behavior, checks known to
+     have run on the reviewed head, adversarial-review evidence if available,
+     weak or missing oracles, and concrete second-pair-of-eyes findings.
+   - **Read this code**: assign zero to three exact, consequential snippets using
+     the reading-assignment rules below. Say explicitly when no manual code
+     reading is recommended.
+   - **Manual checks**: give only the integrated or product checks that remain
+     valuable after automation.
+3. Keep this overview in the conversation. Do not generate HTML merely to make
+   quick mode resemble an explain-diff artifact; create a visual artifact only
+   when interaction materially improves understanding.
+4. Stop after the overview and ask whether to begin the quiz.
+5. Ask exactly three interactive questions, one at a time, using the quiz
+   quality rules below. Test the main flow, the most consequential invariant or
+   trade-off, and what remains unproved or where debugging should begin.
+6. After the quiz, give a compact synthesis and one evidence-based merge
+   posture: automated evidence sufficient, manual verification still required,
+   or escalate to full review. Leave the merge decision to the user.
+
 ## Optimize for reduced context reconstruction
 
 - Use conversation as the interface and code as evidence.
@@ -66,6 +122,9 @@ gate.
 - Let strong tests establish straightforward capability. Direct detailed code
   reading toward the branches, queries, calculations, side effects, or failure
   paths where implementation details can still violate the contract.
+- Distinguish links used for explanation or navigation from explicit human
+  reading assignments. Do not make the user infer which linked code they are
+  actually expected to inspect.
 - Distinguish facts, suspected defects, and design questions. The user will ask
   follow-ups; do not manufacture a ceremony of mandatory questions.
 
@@ -89,7 +148,8 @@ required for this PR:
 
 Do not wander into unrelated architecture. Highlight important schema, type,
 endpoint, mutation, and data-shape changes early because they frame the rest of
-the review.
+the review. In quick mode, compress this into the smallest useful mental model
+inside the one-response overview.
 
 ## 2. Intuition
 
@@ -114,7 +174,15 @@ straightforward behavior or let it delay the actual review.
 
 ## 3. Code
 
-### Establish the logical review route
+### Quick-mode high-level walkthrough
+
+In quick mode, do not establish a file-by-file route or wait for approval
+between targets. Cover the complete implementation internally, then explain the
+change once in conceptual groups ordered by execution, dependency, or data
+flow. Include precise links for supporting evidence and reserve `Read this
+code` for the few locations that actually require human judgment.
+
+### Full-mode logical review route
 
 Cover every changed file, but do not use alphabetical file order. Group and
 order production code, supporting types or schemas, and its tests by conceptual
@@ -126,10 +194,12 @@ a separate block.
 Split a very large file into coherent targets such as validation, query
 construction, core algorithm, persistence, error handling, or rendering.
 Present the route briefly, identify the highest-value manual-review targets,
-name the first target, then stop and ask whether to begin it. The initial route
-is an agenda, not the file review itself.
+name the first target, then stop and ask whether to begin it. Label which route
+targets are likely to require direct human code reading, but defer exact line
+assignments until that target is current. The initial route is an agenda, not
+the file review itself.
 
-## Build a context packet for each target
+## Build a context packet for each full-mode target
 
 At the start of a file or file section, inspect the full relevant code, its base
 version, callers, callees, types, helpers, consumers, and relevant test groups.
@@ -179,13 +249,36 @@ save exhaustive body reading. They are not sufficient when the oracle is weak,
 the mock omits reality, or correctness depends on query shape, authorization,
 financial calculation, concurrency, performance, or external side effects.
 
-### Highest-value code to inspect
+### Explicit human reading assignment
 
-- Point to exact lines or the smallest useful ranges.
-- Explain why each location deserves human judgment and what failure would look
-  like.
-- Prefer a few consequential locations over asking the user to understand every
-  line equally.
+Every target packet must clearly separate code the user should read from links
+provided only as supporting context. Include a visually distinct `Read this
+code` block; ordinary file and line links elsewhere in the explanation do not
+count as a reading assignment.
+
+Use only the parts that apply:
+
+- **Read directly:** point to the exact function, branch, diff hunk, or smallest
+  useful line range. Explain why it deserves human judgment, what question the
+  user should answer while reading, and what failure would look like.
+- **Read the assertions:** point to critical assertions, mocks, fixtures, or
+  expected values when the test oracle itself deserves human validation.
+- **Agent-covered:** identify code whose behavior is sufficiently established
+  by the context packet, strong tests, deterministic checks, or mechanical
+  inspection and therefore does not need manual source reading.
+- **Optional drill-down:** link code that becomes worth reading only if the user
+  disputes an assumption, test result, or explanation.
+
+Keep the assignment sparse and risk-based. Prefer a few consequential snippets
+over broad file links or asking the user to understand every line equally. If a
+target genuinely requires no manual source reading, say `No manual code reading
+recommended for this target` and explain the evidence supporting that choice.
+Never label a location as read, understood, or verified merely because it was
+linked or summarized.
+
+Walk through assigned snippets conversationally rather than dumping a list.
+Make the exact judgment explicit, let the user inspect or question the code, and
+remain on the current target until the user chooses to continue.
 
 ### Second-pair-of-eyes findings
 
@@ -237,7 +330,8 @@ Do not let tests replace direct inspection of consequential:
   performance.
 
 For these surfaces, explain the invariant and test coverage, then point the user
-to the exact implementation details that determine correctness.
+to the exact implementation details that determine correctness and include
+them under `Read directly`; a contextual link alone is not sufficient.
 
 ### Changes during review
 
@@ -247,11 +341,12 @@ separate review-management workflow.
 
 ## 4. Quiz
 
-After every changed file has been reviewed, run a PR-level understanding quiz
-before giving the final synthesis. Create five interactive multiple-choice
-questions. Make them medium difficulty: answering should require understanding
-the substance of the PR, but the questions must not be gotchas. Ask them one at
-a time and test the user's ability to:
+In full mode, start the PR-level quiz after every changed file has been reviewed
+and create five interactive multiple-choice questions. In quick mode, start
+after the one-response overview and create exactly three questions. In both
+modes, make them medium difficulty: answering should require understanding the
+substance of the PR, but the questions must not be gotchas. Ask them one at a
+time and test the user's ability to:
 
 - trace the main input -> transformation -> state or output flow;
 - explain a consequential invariant or contract;
