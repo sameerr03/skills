@@ -1,62 +1,84 @@
 ---
 name: atlas
-description: Research and plan a large, long-running task through an evolving ATLAS.md draft and a verified visual GitHub issue map. Use when a task is too large for one reviewable PR or agent session and needs an epic, nested sub-issues, exact PR-sized implementation leaves, and native blocking relationships before execution. Resolve research and important decisions during planning, publish the approved draft to GitHub, verify the complete issue graph, freeze ATLAS.md as a pointer, then stop without implementing it.
+description: Research and shape a large, long-running task through open-ended alignment, lightweight ATLAS.md notes, and a visual GitHub issue map. Use when work is too large for one reviewable PR or agent session and needs outcome-focused implementation leaves, native dependencies, GitHub-first review, and an execution-ready handoff to Expedition. Publish the draft map for review, refine it on GitHub, verify it, then stop without implementing it.
 ---
 
 # Atlas
 
 ## Purpose
 
-Turn a large objective into a decision-complete GitHub execution map. Atlas charts the route; it does not implement it.
+Turn a large objective into an outcome-complete, dependency-complete, reviewable GitHub execution map. Atlas charts the route; it does not implement it.
 
-During planning, `ATLAS.md` is the canonical draft and durable discussion tracker. After approved publication and read-back verification, GitHub's native issue hierarchy and blocked-by relationships become the execution source of truth. Never maintain two authoritative maps.
+Atlas must establish the end-to-end outcome, operating model, important constraints, consequential technical decisions, review points, and sensible PR boundaries. It must not prescribe ordinary implementation details that the future Expedition orchestrator can decide from the live code and the user's intent.
 
-## ATLAS.md Lifecycle
+`ATLAS.md` is a lightweight research and discussion notebook. Once a draft issue map is published, GitHub becomes the review surface and source of truth. Never maintain two authoritative maps.
 
-Create `ATLAS.md` at the repository root unless the user chooses another location. Start minimally with the destination, Expedition goal, scope, non-goals, open questions, and an empty issue-map section. Update it after substantive research, decisions, or map changes rather than transcribing every conversation turn.
+## Lifecycle
 
-Grow the document in two stages:
+1. **Align.** Inspect the existing system and discuss the objective, current behavior, desired end-to-end workflow, trust boundaries, realistic failure cases, scope, and non-goals.
+2. **Shape the map.** Propose independently reviewable implementation leaves, their observable outcomes, dependencies, and integrated acceptance path.
+3. **Publish for review.** With explicit permission, publish the epic and leaves to GitHub as an under-review map, including native relationships and a Mermaid dependency diagram in the epic.
+4. **Refine and accept.** Apply the user's issue-level feedback, verify the complete graph, and only after explicit acceptance mark it ready for Expedition and freeze `ATLAS.md` to a pointer.
 
-1. **Design the map.** Decide grouping issues, implementation leaves, one-PR boundaries, exclusions, parent/sub-issue hierarchy, and blocking relationships.
-2. **Plan each PR deeply.** Expand every implementation leaf with its outcome, context, resolved decisions, affected surfaces, acceptance criteria, validation, assumptions, dependencies, subtraction expectations, and conditions requiring a return to Atlas.
+Create `ATLAS.md` at the repository root unless the user chooses another location. Start it minimally with the objective, current understanding, scope, non-goals, accepted assumptions, open questions, and a preliminary issue map. Update it after substantive research or decisions so the discussion survives compaction; do not turn it into a polished duplicate of the GitHub issues.
 
-Keep uncertainty explicit. Never record an open question as a decision or publish speculative downstream work.
+Define one **Expedition Goal** as a concrete outcome statement. Include completion conditions: every implementation leaf has an accepted exact PR head, required integrated acceptance passes, blockers and residual risks are reported, and no PR is merged without explicit user authorization.
 
-Define one **Expedition Goal** as a concrete outcome statement that the future orchestrator can pursue without reinterpreting the destination. Include the completion conditions: every implementation leaf has an accepted exact PR head, required integrated acceptance passes, blockers and residual risks are reported, and no PR is merged without explicit user authorization.
+## Discussion and Research
 
-## Planning
+- Inspect the codebase, architecture, history, documentation, existing issues, and external contracts before asking the user questions the repository can answer.
+- Use an open-ended conversation. Periodically reflect the complete understanding and invite correction; do not run an exhaustive decision-tree interview or turn ordinary technical suggestions into a sequence of recommended yes/no approvals.
+- Establish the plain-language operator or user journey before proposing mechanisms. Identify where data or behavior becomes trusted and which realistic failures must be prevented.
+- Push back with concrete evidence and the smallest necessary safeguard. Do not manufacture requirements from generic edge cases, hostile threat models, or speculative future uses that contradict the agreed operating model.
+- Resolve product decisions and cross-leaf contracts during Atlas. Keep consequential uncertainty explicit rather than publishing it as a settled implementation requirement.
 
-1. Establish the destination, Expedition goal and completion conditions, scope, non-goals, constraints, repository, and relevant existing issues in `ATLAS.md`.
-2. Inspect the codebase, architecture, history, documentation, and external contracts needed to plan accurately. Conduct the user discussion, research, and important product or technical decisions now, recording their durable outcomes.
-3. If research is incomplete or a consequential decision remains unresolved, continue planning or stop for the user rather than turning uncertainty into an implementation issue.
-4. Break the destination into coherent workstreams, then recursively split them until every implementation leaf represents one independently understandable, testable, reviewable PR. A grouping issue may contain children but is not itself a PR unit.
-5. Complete the deep plan for every implementation leaf and define native blocked-by relationships for every dependency. Explicitly identify leaves with no blockers, reject cycles, and ensure no leaf is orphaned from the epic hierarchy.
+Each leaf must explicitly define consequential technical changes it owns. These include schema and type changes, migrations and backfills, authentication or authorization changes, public APIs and external contracts, persistent state, service boundaries, new dependencies or providers, destructive or irreversible data behavior, and any other choice that materially affects data safety or multiple leaves.
 
-## Implementation Constraints
+Leave ordinary internal implementation choices to the future Expedition orchestrator. The orchestrator owns the worker prompt because it retains the planning context and user intent. A worker executes that bounded plan and its self-review loop; it must not independently redesign the leaf or expand its scope.
 
-Make each implementation leaf constrain code growth as well as behavior:
+## Design the Map
 
-- Reuse existing modules, state, schemas, services, and dependencies before adding abstractions.
-- Do not introduce a new schema concept, state layer, service boundary, or dependency unless Atlas has researched the need and the user has approved that architectural direction.
-- Estimate the likely files touched and production-code line impact before publishing the leaf. Treat estimates as scope alarms, not quotas or implementation targets.
-- Define a stop condition requiring execution to return to Atlas when the discovered work materially exceeds the estimated surface or requires an unapproved architectural concept.
-- State which existing paths, abstractions, or files the change should delete, replace, or make obsolete. Say explicitly when the leaf is intentionally additive.
-- Perform a subtraction review of the proposed map: ask whether the same product outcome can use fewer concepts, fields, layers, dependencies, compatibility paths, or PRs. Revise the map when the answer is yes.
+- Break the end-to-end workflow into coherent outcomes, not merely codebase layers. Prefer vertical, demonstrable slices.
+- Make every implementation leaf one independently understandable, testable, and reviewable PR with a meaningful capability, artifact, interface, report, or behavior at its branch head.
+- Allow dependent leaves when each boundary still has standalone verification and a stable output contract. Do not split backend, frontend, schema, or infrastructure mechanically when the resulting branch has no useful review surface.
+- Map one implementation leaf to one persistent Expedition worker task and one PR. Use grouping issues only when they materially improve navigation; grouping issues are not PR units.
+- Define native blocked-by relationships, identify unblocked leaves, reject cycles, and ensure no leaf is orphaned from the epic.
 
-## Publish the Map
+Each leaf should state only what execution and review need:
 
-Present the complete `ATLAS.md` to the user before creating or changing GitHub issues. Treat the approved version as the publication snapshot. After explicit approval:
+- outcome and why the leaf exists;
+- inputs, outputs, and user review surface;
+- acceptance criteria and mechanical or human validation;
+- dependencies and integrated role;
+- consequential technical decisions;
+- explicit exclusions and assumptions; and
+- conditions requiring a return to Atlas.
 
-1. Create the epic with an explicit `## Expedition Goal` section, then create all grouping and implementation issues.
-2. Convert each implementation section into its issue body, then attach native parent/sub-issue and blocked-by relationships.
-3. Read the graph back from GitHub and compare the Expedition goal, titles, bodies, hierarchy, dependencies, cycles, and orphaned leaves against the approved snapshot. Correct publication discrepancies before declaring the map ready.
-4. Make GitHub canonical. Replace the full `ATLAS.md` with a small frozen pointer containing the Atlas title, published status and date, epic link, and a statement that GitHub is the execution source of truth.
-5. Report the epic link and a concise named overview of the verified map.
+Mention affected code surfaces when research makes them useful, but do not predict exact files, abstractions, or line counts merely to make the plan appear complete. Lines of code are not a scope target.
+
+## Control Complexity
+
+- Reuse existing modules, state, schemas, services, and dependencies before adding concepts.
+- Introduce a new schema concept, persistent state layer, service boundary, provider, dependency, compatibility path, security mechanism, or versioning system only when an explicit requirement, existing contract, realistic failure, or cross-leaf interface justifies it.
+- Treat the user's operating assumptions as design constraints. Do not build machinery to defend against scenarios those assumptions exclude unless codebase evidence shows a concrete correctness risk.
+- Perform a subtraction review of the map: seek the same outcome with fewer concepts, fields, layers, dependencies, compatibility paths, validators, and PRs while preserving meaningful verification.
+- Return to Atlas when execution discovers a consequential technical change or issue boundary that the accepted map did not authorize.
+
+## Publish and Review on GitHub
+
+After enough alignment to produce a credible map, present a compact overview and obtain explicit permission to publish it for review. Do not require the user to approve a fully expanded `ATLAS.md` first.
+
+1. Create the epic with `## Expedition Goal`, scope, non-goals, operating model, an `Atlas status: Under review` marker, and a Mermaid dependency map that visually keys every implementation leaf.
+2. Create the implementation issues with their leaf contracts, then attach native parent/sub-issue and blocked-by relationships. Native relationships remain authoritative; keep the Mermaid diagram synchronized as the visual overview.
+3. Let the user review the published GitHub issues directly. Revise issue bodies, boundaries, hierarchy, dependencies, and the epic diagram from that feedback.
+4. Read the graph back from GitHub and verify the goal, titles, bodies, hierarchy, dependencies, cycles, orphaned leaves, and diagram against the accepted map.
+5. After explicit acceptance, mark the epic `Atlas status: Ready for Expedition`. Replace `ATLAS.md` with a small frozen pointer containing the title, publication date, epic link, and statement that GitHub is the execution source of truth.
+6. Report the epic link and a concise named overview of the verified map.
 
 ## Boundaries
 
-- Atlas may research, inspect, discuss, maintain `ATLAS.md`, and write the approved issue map. It must not edit product code, create branches or PRs, launch implementation workers, or begin executing the map.
-- The epic is a low-resolution overview and scope anchor. Detailed implementation contracts live in exactly one issue rather than being copied across the epic and children.
-- Do not create separate research tickets as a substitute for planning. Research required to define the implementation graph belongs in Atlas.
-- Do not commit or push the planning tracker unless the user explicitly asks. After publication, Expedition reads GitHub rather than the frozen pointer.
-- When the destination is small enough for one reviewable PR, say that an epic map is unnecessary and ask how the user wants to proceed.
+- Atlas may research, inspect, discuss, maintain `ATLAS.md`, and publish or revise the issue map with authorization. It must not edit product code, create branches or PRs, launch implementation workers, or execute the map.
+- Detailed implementation contracts live in exactly one issue rather than being copied across the epic and children.
+- Do not create research tickets as a substitute for planning. Research needed to make the graph credible belongs in Atlas.
+- Do not commit or push the planning notebook unless the user explicitly asks. Expedition reads GitHub after acceptance.
+- When the destination is small enough for one reviewable PR, say that an Atlas map is unnecessary and ask how the user wants to proceed.
