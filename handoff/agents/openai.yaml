@@ -1,4 +1,0 @@
-interface:
-  display_name: "Handoff"
-  short_description: "Create discussion-first Codex threads"
-  default_prompt: "Use $handoff to create a fresh Codex thread that starts by understanding the task before implementation."
