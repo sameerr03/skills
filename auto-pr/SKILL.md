@@ -1,5 +1,5 @@
 ---
-name: automated-pr-review-loop
+name: auto-pr
 description: Run an autonomous pull-request review loop for Codex and CodeRabbit feedback, including base-aware review triggering, token-efficient polling, and rate-limit recovery. Use when the user asks to wait for PR checks or automated reviews, address valid bot review comments, keep polling a PR after fix commits, or continue until automated review is complete. Independently verify and adjudicate every inline, outside-diff, nitpick, summary, and top-level finding before editing; automatically fix only findings supported by the code and established task assumptions; validate, commit, and push fixes; then process reviews until CodeRabbit has no valid unaddressed feedback.
 ---
 
