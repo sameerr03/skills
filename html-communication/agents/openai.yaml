@@ -1,0 +1,4 @@
+interface:
+  display_name: "HTML Communication"
+  short_description: "Turn plans and reports into HTML"
+  default_prompt: "Use $html-communication to turn this plan into a clear HTML document."

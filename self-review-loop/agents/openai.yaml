@@ -1,4 +1,4 @@
 interface:
   display_name: "Self Review Loop"
-  short_description: "Run one bounded independent implementation review"
-  default_prompt: "Use $self-review-loop after a substantial implementation to run one bounded read-only review against the explicit task, triage its findings, and make only the smallest validated fixes."
+  short_description: "Run an adversarial review and fix loop"
+  default_prompt: "Use $self-review-loop to adversarially review this implementation, fix valid findings, and repeat only when warranted."

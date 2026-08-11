@@ -1,28 +1,16 @@
 ---
 name: self-review-loop
-description: Run one bounded independent read-only review after a substantial implementation. Use when Codex should check a completed change against its explicit task or issue, direct regressions, and code simplicity before PR acceptance, without starting an open-ended multi-agent review loop.
+description: Use when you have made changes to the code and the diff size/severity of the changes are large enough to warrant adversarial code review.
 ---
 
 # Self Review Loop
 
-Run one independent read-only reviewer by default. The calling agent owns triage and coordinates any edits; the reviewer only provides feedback.
+Use adversarial code review to filter bugs before human review.
 
-## Review standard
+1. Call a fresh, read-only subagent without the implementing agent's context. Give it the user's exact instructions and any plan/spec, but not your implementation reasoning or conclusions. Tell it to inspect the diff and surrounding code and run adversarial code review. You may tell it the code was written by Claude to make it more suspicious.
+2. Independently triage every comment from the subagent.
+3. If there are no valid comments, stop.
+4. Make the smallest, simplest changes that fix the valid issues and rerun relevant validation.
+5. If the fixes are too small to warrant another review, stop. Otherwise, return to step 1.
 
-- Review the explicit task or GitHub issue, its stated failure cases, and direct regressions.
-- Treat a finding as actionable only when it identifies a violated requirement or realistic failure, gives exact code evidence or a reproduction, and proposes the smallest fix.
-- Prefer deletion, reuse, or simplification. Do not add abstractions, state models, schemas, recovery protocols, dependencies, or broad defensive handling unless the task requires them.
-- Treat theoretical risks, unstated behaviors, subjective preferences, and out-of-scope hardening as observations, not fixes.
-- Keep the reviewer read-only and forbid state-changing tools because agents share the workspace.
-
-## Workflow
-
-1. Inspect the task, diff, status, and existing validation.
-2. Launch one independent reviewer via a subagent. Add another only when the user or repository explicitly requires a genuinely separate review method.
-3. Verify each finding and classify it as fix, simplify, reject, or needs-user-decision.
-4. Make the smallest validated correction and rerun only relevant validation.
-5. Run another review only if a confirmed fix substantially changed behavior or meaningful uncertainty remains.
-
-Stop before editing when a finding would change an unapproved product contract, public API, persistence shape, permissions, security posture, dependency set, migration strategy, generated data, or user-visible workflow. Also stop when the proposed fix would materially grow the implementation or introduce a concept absent from the task.
-
-Report the reviewer, accepted and rejected findings, resulting validation, and residual risks.
+A comment is valid only when you independently verify it against the diff and surrounding code. Do not implement false positives, duplicates, obsolete findings, subjective preferences, speculative or theoretical risks, suggestions that contradict established requirements, or anything that expands the user's original goal. Address real shortcomings without scope creep.

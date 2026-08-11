@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute Plan"
+  short_description: "Execute a large plan as review-ready PRs"
+  default_prompt: "Use $execute-plan to implement this agreed plan as a validated stack of review-ready pull requests."

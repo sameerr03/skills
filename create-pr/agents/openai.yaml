@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create PR"
+  short_description: "Write clear pull request titles and bodies"
+  default_prompt: "Use $create-pr to open a clear, review-ready pull request."
