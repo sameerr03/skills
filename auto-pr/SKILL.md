@@ -7,12 +7,10 @@ description: Use when the user asks to monitor, or get a PR ready to merge.
 
 ## Purpose
 
-Carry an existing pull request through automated review. All the repos have various PR Review bots. They are helpful but they may not always be right. In these repos, review triggering depends on the PR's base branch:
+Carry an existing pull request through automated review. All the repos have PR Review bots. They are helpful but they may not always be right. In these repos, review triggering depends on the PR's base branch: (Current bots setup: Coderabbit)
 
-- When the base branch is `main`, Codex and CodeRabbit automatically review the PR when it is created and automatically run subsequent reviews after every new commit. Do not post a manual review-trigger comment except when recovering from a confirmed rate limit.
-- When the base branch is not `main`, Codex and CodeRabbit do not automatically run reviews. Post the exact comment (`@coderabbitai review` or `@codex review`) to trigger the respective agent for the current head, including after every new commit.
-
-Do not wait for Codex in PR checks or for a completion summary. After the normal review wait, inspect its inline comments for the current head. If none appeared, treat the review as complete and clean.
+- When the base branch is `main`, CodeRabbit automatically reviews the PR when it is created and automatically run subsequent reviews after every new commit. Do not post a manual review-trigger comment except when recovering from a confirmed rate limit.
+- When the base branch is not `main`, CodeRabbit does not automatically run reviews. Post the exact comment (`@coderabbitai review`) to trigger for the current head, including after every new commit.
 
 Treat every reviewer comment as a hypothesis. Independently verify and adjudicate it against the current code before editing. The goal is to resolve valid problems, not blindly satisfy bots. Do not implement false positives, duplicates, obsolete findings, subjective preferences, or suggestions that contradict established requirements. Do not let review feedback expand the PR beyond the user's original goal. Address real shortcomings but avoid scope creep. Do not pause for user approval between adjudication and implementation: automatically fix findings supported by the evidence and leave the rest unchanged with a concise reason.
 
