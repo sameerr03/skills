@@ -16,3 +16,29 @@ Create one self-contained HTML file.
 - Default to dark mode.
 - Ensure it is mobile-readable.
 - Use inline scripts when interactivity materially helps communicate or explore concepts.
+
+## Delivery
+
+Write the file to `/tmp` with a descriptive filename. Do not start a local HTTP server or run `tailscale serve` for the user. Never use, add, or recommend the `--bg` flag with `tailscale serve`.
+
+Keep all serving information out of the HTML file itself. Do not add local or Tailscale links, terminal commands, setup instructions, or a "serve this document" section to the generated document. Put that information only in the agent's inline chat response that accompanies the file.
+
+In the final response, always provide:
+
+- A clickable local link: `http://127.0.0.1:8781/<filename>`.
+- A clickable Tailscale link: `https://<tailscale-dns-name>:8443/<filename>`.
+- The two copy-paste commands below, separately labeled so the user can choose the one that fits their situation.
+
+Resolve the current machine's Tailscale DNS name with a read-only status check and remove any trailing period. If it cannot be resolved, keep `<tailscale-dns-name>` in the link and clearly label it as a placeholder. Never imply that either HTTP endpoint is already running.
+
+Use this command when a server is already listening on port 8781:
+
+```bash
+tailscale serve --https=8443 http://127.0.0.1:8781
+```
+
+Use this command to start a server for `/tmp` and expose it through Tailscale:
+
+```bash
+python3 -m http.server 8781 --bind 127.0.0.1 --directory /tmp & tailscale serve --https=8443 http://127.0.0.1:8781
+```
