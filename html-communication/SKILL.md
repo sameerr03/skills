@@ -16,3 +16,6 @@ Create one self-contained HTML file.
 - Default to dark mode.
 - Ensure it is mobile-readable.
 - Use inline scripts when interactivity materially helps communicate or explore concepts.
+
+### Deliverable
+Deliver as one html file in a temporary/gitignored folder. Open it in the t3code browser preview.

@@ -1,6 +1,6 @@
 ---
 name: auto-pr
-description: Use when the user asks to monitor, or get a PR ready to merge.
+description: Use when the user asks to monitor, or get a PR ready to merge/get a pr to be "green". Do not invoke for code review
 ---
 
 # Automated PR Review Loop

@@ -22,4 +22,4 @@ Good: `feat(platform): split product surfaces by hostname`
 
 Keep the body focused on why the change exists, what behavior changed, and how it was verified. Use the user's initial request and discussion to understand the intent behind the change when writing the title and description. Include UI evidence, exclusions, or residual risks only when relevant. Do not restate the diff. Use `Closes #N` only when the pull request fully closes an issue.
 
-Open it ready for review unless the user requests a draft. Do not merge.
+Open it as a draft unless the user requests to create it as open. Do not merge.
